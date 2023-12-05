@@ -5,8 +5,6 @@ from PIL import Image
 from torchvision.transforms import functional as func
 
 
-
-
 def add_detect_to_dataset(dataset, num_samples = None, map_labels={}, predictions_label = "predictions"):
     if(num_samples is None):
         num_samples = len(dataset)
