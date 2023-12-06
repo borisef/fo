@@ -5,6 +5,8 @@ import torchvision
 import use_model_to_detect
 from fiftyone import ViewField as F
 
+from read_my_coco import  read_my_coco
+
 
 
 
@@ -28,6 +30,26 @@ dataset = fo.Dataset.from_dir(
     dynamic=True
 )
 
+dataset = read_my_coco(dataset_dir,json_path,[],[])
+# Compute metadata so we can reference image height/width in our view
+dataset.compute_metadata()
+
+#RUN DETECTION MODEL (see https://docs.voxel51.com/recipes/adding_detections.html)
+map_labels_coco2vehicles = {6:2,3:3,4:4,8:5}
+dataset = use_model_to_detect.add_detect_to_dataset(dataset,num_samples=126, map_labels=map_labels_coco2vehicles,predictions_label="predictions_faster")
+
+#RUN MMDETECTION MODEL NOT WORKING YET
+# config = "/home/borisef/projects/mm/mmdetection/boris3/config/faster-rcnn_r50-caffe_fpn_ms-1x_coco_FULL.py"
+# ckpt = "/home/borisef/projects/mm/mmdetection/checkpoints/faster_rcnn_r50_caffe_fpn_mstrain_1x_coco-5324cff8.pth"
+# use_model_to_detect.add_mmdetect_to_dataset(dataset,config, ckpt, num_samples=None,map_labels = map_labels_coco2vehicles,predictions_label="mm_predictions_faster")
+
+
+
+#evaluate
+high_conf_view = dataset.filter_labels("predictions_faster", F("confidence") > 0.75, only_matches=False)
+eval_results = fo.evaluate_detections(high_conf_view,pred_field="predictions_faster",gt_field = "detections",eval_key = 'eval',method=None,classwise=True)
+eval_results.print_report()
+
 # compute uniqness
 import fiftyone.brain as fob
 fob.compute_uniqueness(dataset)
@@ -45,16 +67,7 @@ duplicates = fob.compute_exact_duplicates(dataset)
 #TODO: add tag has_duplicate to each sample
 
 
-#RUN DETECTION MODEL (see https://docs.voxel51.com/recipes/adding_detections.html)
-map_labels_coco2vehicles = {6:2,3:3,4:4,8:5}
-dataset = use_model_to_detect.add_detect_to_dataset(dataset,num_samples=126, map_labels=map_labels_coco2vehicles,predictions_label="predictions_faster")
-#evaluate
-high_conf_view = dataset.filter_labels("predictions_faster", F("confidence") > 0.75, only_matches=False)
-eval_results = fo.evaluate_detections(high_conf_view,pred_field="predictions_faster",gt_field = "detections",eval_key = 'eval',method=None,classwise=True)
-eval_results.print_report()
 
-# Compute metadata so we can reference image height/width in our view
-dataset.compute_metadata()
 
 # Only contains detections with confidence >= 0.75
 #high_conf_view = dataset.filter_labels("predictions_faster", F("confidence") > 0.75)
