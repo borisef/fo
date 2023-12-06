@@ -13,7 +13,7 @@ name = "vehicles"
 
 # The directory containing the dataset to import
 dataset_dir = "/home/borisef/data/vehicles/test/"
-json_path = "/home/borisef/data/vehicles/test/annotations.json"
+json_path = "/home/borisef/data/vehicles/test/annotations_small.json"
 
 
 # The type of the dataset being imported
@@ -25,6 +25,7 @@ dataset = fo.Dataset.from_dir(
     dataset_type=dataset_type,
     labels_path=json_path,
     #name=name,
+    dynamic=True
 )
 
 # compute uniqness
@@ -74,3 +75,4 @@ cm = eval_results.plot_confusion_matrix()
 session.plots.attach(cm) # only jupyter
 cm.show() #won't work
 cm.save("/home/borisef/temp/cm.png")
+
