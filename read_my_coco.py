@@ -1,7 +1,7 @@
 import json
 import fiftyone as fo
 
-def read_my_coco(dataset_dir, json_path, img_fields, anno_fields):
+def read_my_coco(dataset_dir, json_path, img_fields = [], anno_fields = []):
     # read all attributes from coco , assumption - same order
     dataset_type = fo.types.COCODetectionDataset
 

@@ -8,7 +8,7 @@ from torchvision.transforms import functional as func
 
 
 
-def add_detect_to_dataset(dataset, num_samples = None, map_labels={}, predictions_label = "predictions"):
+def add_detect_to_dataset(dataset, num_samples = None, map_labels={}, predictions_label = "predictions", score_threshold = 0.25):
     if(num_samples is None):
         num_samples = len(dataset)
 
@@ -25,7 +25,7 @@ def add_detect_to_dataset(dataset, num_samples = None, map_labels={}, prediction
     # Choose a random subset of 100 samples to add predictions to
     predictions_view = dataset.take(num_samples, seed=51)
 
-    # Get class list
+    # Get class list: TODO: default_classes not always exist
     classes = dataset.default_classes
 
     # Add predictions to samples
@@ -65,92 +65,17 @@ def add_detect_to_dataset(dataset, num_samples = None, map_labels={}, prediction
                 # in relative coordinates in [0, 1] x [0, 1]
                 x1, y1, x2, y2 = box
                 rel_box = [x1 / w, y1 / h, (x2 - x1) / w, (y2 - y1) / h]
-
-                detections.append(
-                    fo.Detection(
-                        label=classes[label],
-                        bounding_box=rel_box,
-                        confidence=score
+                if score_threshold <= score:
+                    detections.append(
+                        fo.Detection(
+                            label=classes[label],
+                            bounding_box=rel_box,
+                            confidence=score
+                        )
                     )
-                )
 
             # Save predictions to dataset
             sample[predictions_label] = fo.Detections(detections=detections)
             sample.save()
 
         return dataset
-
-# import mmcv
-# from mmcv.transforms import Compose
-# from mmdet.apis import init_detector, inference_detector
-#
-# def add_mmdetect_to_dataset(dataset,config_file, checkpoint, num_samples=None,map_labels ={},predictions_label="mm_predictions_faster"):
-#     if (num_samples is None):
-#         num_samples = len(dataset)
-#
-#         # Run the model on GPU if it is available
-#     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#
-#     # Build the model from a config file and a checkpoint file
-#     model = init_detector(config_file, checkpoint, device='cuda:0')
-#
-#     print("Model ready")
-#
-#     # Choose a random subset of 100 samples to add predictions to
-#     predictions_view = dataset.take(num_samples, seed=51)
-#
-#     # Get class list
-#     classes = dataset.default_classes
-#
-#     # Add predictions to samples
-#     with fo.ProgressBar() as pb:
-#         for sample in pb(predictions_view):
-#             # Load image
-#             image = Image.open(sample.filepath)
-#             image = func.to_tensor(image).to(device)
-#             c, h, w = image.shape
-#
-#             # Perform inference
-#             result = inference_detector(model, image)
-#             preds = model([image])[0]
-#             labels = preds["labels"].cpu().detach().numpy()
-#             scores = preds["scores"].cpu().detach().numpy()
-#             boxes = preds["boxes"].cpu().detach().numpy()
-#
-#             # Convert detections to FiftyOne format
-#             detections = []
-#
-#             keys = map_labels.keys()
-#             true_labels = []
-#             true_scores = []
-#             true_boxes = []
-#             if (len(keys) == 0):
-#                 true_labels = labels
-#                 true_scores = scores
-#                 true_boxes = boxes
-#             else:
-#                 for label, score, box in zip(labels, scores, boxes):
-#                     if (label in keys):
-#                         true_labels.append(map_labels[label])
-#                         true_scores.append(score)
-#                         true_boxes.append(box)
-#
-#             for label, score, box in zip(true_labels, true_scores, true_boxes):
-#                 # Convert to [top-left-x, top-left-y, width, height]
-#                 # in relative coordinates in [0, 1] x [0, 1]
-#                 x1, y1, x2, y2 = box
-#                 rel_box = [x1 / w, y1 / h, (x2 - x1) / w, (y2 - y1) / h]
-#
-#                 detections.append(
-#                     fo.Detection(
-#                         label=classes[label],
-#                         bounding_box=rel_box,
-#                         confidence=score
-#                     )
-#                 )
-#
-#             # Save predictions to dataset
-#             sample[predictions_label] = fo.Detections(detections=detections)
-#             sample.save()
-#
-#         return dataset
